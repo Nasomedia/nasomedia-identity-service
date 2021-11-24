@@ -13,13 +13,13 @@ load_dotenv()
 
 
 class Settings(BaseSettings):
-    API_V1_STR: str = "/api/v1"
+    API_V1_STR: str = "/v1"
+    PROJECT_NAME: str = os.getenv("PROJECT_NAME")
+    
     SECRET_KEY: str = secrets.token_urlsafe(32)
+    TOKEN_URL: str = os.getenv("TOKEN_URL")
     # 60 minutes * 24 hours * 1 days = 1 days
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 1
-    SERVER_NAME: str = "localhost"
-    # SERVER_HOST: AnyHttpUrl = "127.0.0.1"
-    SERVER_HOST: str = "127.0.0.1"
     # BACKEND_CORS_ORIGINS is a JSON-formatted list of origins
     # e.g: '["http://localhost", "http://localhost:4200", "http://localhost:3000", \
     # "http://localhost:8080", "http://local.dockertoolbox.tiangolo.com"]'
@@ -33,15 +33,6 @@ class Settings(BaseSettings):
         elif isinstance(v, (list, str)):
             return v
         raise ValueError(v)
-
-    PROJECT_NAME: str = os.getenv("PROJECT_NAME")
-    SENTRY_DSN: Optional[HttpUrl] = None
-
-    @validator("SENTRY_DSN", pre=True)
-    def sentry_dsn_can_be_blank(cls, v: str) -> Optional[str]:
-        if len(v) == 0:
-            return None
-        return v
 
     POSTGRES_SERVER: str = os.getenv("POSTGRES_SERVER")
     POSTGRES_USER: str = os.getenv("POSTGRES_USER")
@@ -91,20 +82,5 @@ class Settings(BaseSettings):
     FIRST_SUPERUSER: EmailStr = os.getenv("FIRST_SUPERUSER")
     FIRST_SUPERUSER_PASSWORD: str = os.getenv("FIRST_SUPERUSER_PASSWORD")
     USERS_OPEN_REGISTRATION: bool = os.getenv("USERS_OPEN_REGISTRATION") == True
-
-    TOSS_CLIENT_KEY: str = os.getenv("TOSS_CLIENT_KEY")
-    TOSS_SECRET_KEY: str = os.getenv("TOSS_SECRET_KEY")
-    TOSS_AUTHORIZATION = base64.b64encode(
-        f'{TOSS_SECRET_KEY}:'.encode("utf-8")).decode('utf-8')
-
-    BLOB_CONNECT_STRING: str = os.getenv("BLOB_CONNECT_STRING")
-    BLOB_ACCOUNT_NAME: str = os.getenv("BLOB_ACCOUNT_NAME")
-    BLOB_CONTAINER_NAME: str = os.getenv("BLOB_CONTAINER_NAME")
-
-    IMAGE_URL = f'https://{BLOB_ACCOUNT_NAME}.blob.core.windows.net/{BLOB_CONTAINER_NAME}'
-    
-    class Config:
-        case_sensitive = True
-
 
 settings = Settings()

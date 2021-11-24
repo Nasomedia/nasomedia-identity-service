@@ -1,7 +1,0 @@
-{
-    "python.pythonPath": "/usr/local/bin/python",
-    "python.venvPath": "~/.cache/pypoetry/virtualenvs",
-    "python.linting.pylintEnabled": true,
-    "python.linting.flake8Enabled": false,
-    "python.linting.enabled": true
-}

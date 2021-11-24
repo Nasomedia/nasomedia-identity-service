@@ -5,12 +5,11 @@ from fastapi import APIRouter, Body, Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
-from app import crud, models, schemas, deps
+from app import crud, models, schemas, deps, utils
 from app.core import security
 from app.core.config import settings
-from app.core.security import get_password_hash
+from app.schemas.user import UserUpdate
 from app.utils import (
-    generate_password_reset_token,
     send_reset_password_email,
     verify_password_reset_token,
 )
@@ -20,57 +19,62 @@ router = APIRouter()
 
 @router.post("/access-token", response_model=schemas.Token)
 def login_access_token(
-    db: Session = Depends(deps.get_db), form_data: OAuth2PasswordRequestForm = Depends()
+    db: Session = Depends(deps.get_db), 
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    security: deps.Security = Depends(deps.Security),
 ) -> Any:
     """
     OAuth2 compatible token login, get an access token for future requests
     """
-    user = crud.user.authenticate(
-        db, email=form_data.username, password=form_data.password
-    )
-    if not user:
+    user = crud.user.get_with_email(db, email=form_data.username)
+    if not user: # 아이디 확인
         raise HTTPException(status_code=400, detail="Incorrect email or password")
-    elif not crud.user.is_active(user):
+    if security.verify_password(form_data.password, user.hashed_password): # 비밀번호 확인
+        raise HTTPException(status_code=400, detail="Incorrect email or password")
+    elif not user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")
-    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     return {
         "access_token": security.create_access_token(
-            user.id, expires_delta=access_token_expires
+            user.id, expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
         ),
         "token_type": "bearer",
     }
 
 
-@router.post("/test-token", response_model=schemas.User)
-def test_token(current_user: models.User = Depends(deps.get_current_user)) -> Any:
-    """
-    Test access token
-    """
-    return current_user
-
-
-@router.post("/reset-password/", response_model=schemas.Msg)
-def reset_password(
-    token: str = Body(...),
-    new_password: str = Body(...),
+@router.post("/forget", response_model=schemas.Msg)
+def forget_password(
     db: Session = Depends(deps.get_db),
+    security: deps.Security = Depends(deps.Security),
+    *,
+    email: str = Body(...)
+) -> Any:
+    """
+    Request to reset password
+    """
+    user = crud.user.get_with_email(db, email=email)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    elif not user.is_active:
+        raise HTTPException(status_code=400, detail="Inactive user")
+    
+    utils.send_reset_password_email(
+        email_to=user.email,
+        email=user.email,
+        token=security.generate_password_reset_token(email)
+    )
+    
+    return {"msg": "Password updated successfully"}
+
+
+@router.post("/reset", response_model=schemas.Msg)
+def reset_password(
+    db: Session = Depends(deps.get_db),
+    user: schemas.User = Depends(deps.get_user_with_reset_token),
+    *,
+    new_password: str = Body(...)
 ) -> Any:
     """
     Reset password
     """
-    email = verify_password_reset_token(token)
-    if not email:
-        raise HTTPException(status_code=400, detail="Invalid token")
-    user = crud.user.get_by_email(db, email=email)
-    if not user:
-        raise HTTPException(
-            status_code=404,
-            detail="The user with this username does not exist in the system.",
-        )
-    elif not crud.user.is_active(user):
-        raise HTTPException(status_code=400, detail="Inactive user")
-    hashed_password = get_password_hash(new_password)
-    user.hashed_password = hashed_password
-    db.add(user)
-    db.commit()
+    crud.user.update(db, db_obj=user, password=UserUpdate(password=new_password))
     return {"msg": "Password updated successfully"}

@@ -1,4 +1,4 @@
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt
 from pydantic import ValidationError
@@ -9,8 +9,8 @@ from app.core import security
 from app.core.config import settings
 from .get_db import get_db
 
-resuable_oauth2 = OAuth2PasswordBearer(
-    tokenUrl = settings.IDENTITY_SERVICE_BASE_URL+settings.TOKEN_URL
+reusable_oauth2 = OAuth2PasswordBearer(
+    tokenUrl = settings.TOKEN_URL
 )
 
 
@@ -24,7 +24,7 @@ def get_current_user(
         token_data = schemas.TokenPayload(**payload)
     except (jwt.JWTError, ValidationError):
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
+            status_code=403,
             detail="Could not validate credentials",
         )
     user = crud.user.get(db, id=token_data.sub)
@@ -49,3 +49,22 @@ def get_current_active_superuser(
             status_code=400, detail="The user doesn't have enough privileges"
         )
     return current_user
+
+
+def get_active_user_with_reset_token(
+    db: Session = Depends(get_db), token: str = Depends(reusable_oauth2)
+) -> models.User:
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
+        email = payload["email"]
+    except (jwt.JWTError, ValidationError):
+        raise HTTPException(
+            status_code=403,
+            detail="Could not validate credentials",
+        )
+    user = crud.user.get_with_email(db, email=email)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if not user.is_active:
+        raise HTTPException(status_code=400, detail="Inactive user")
+    return user
