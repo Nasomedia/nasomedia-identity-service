@@ -6,3 +6,4 @@ temp/
 .coverage
 htmlcov
 .ssh/
+.python-version
