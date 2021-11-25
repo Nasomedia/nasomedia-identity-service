@@ -3,8 +3,8 @@ from passlib.context import CryptContext
 
 from sqlalchemy.orm import Session
 
-from app.core.security import get_password_hash, verify_password
-from app.crud.base import CRUDBase
+from app.utils import get_password_hash
+from app.crud import CRUDBase
 from app.models.user import User
 from app.schemas.user import UserCreate, UserUpdate
 

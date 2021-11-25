@@ -1,13 +1,11 @@
-from typing import Any, List
-
+from typing import List
 from fastapi import APIRouter, Body, Depends, HTTPException
 from fastapi.encoders import jsonable_encoder
 from pydantic.networks import EmailStr
 from sqlalchemy.orm import Session
 
-from app import crud, models, schemas, deps
+from app import crud, models, schemas, deps, utils
 from app.core.config import settings
-from app.utils import send_new_account_email
 
 router = APIRouter()
 
@@ -19,7 +17,7 @@ def read_users(
     *,
     skip: int = 0,
     limit: int = 100,
-) -> Any:
+):
     """
     Retrieve users.
     """
@@ -27,31 +25,11 @@ def read_users(
     return users
 
 
-@router.get("/{user_id}", response_model=schemas.User)
-def read_user(
-    db: Session = Depends(deps.get_db),
-    current_user: models.User = Depends(deps.get_current_active_user),
-    *,
-    user_id: int,
-) -> Any:
-    """
-    Get a specific user by id.
-    """
-    user = crud.user.get(db, id=user_id)
-    if user == current_user:
-        return user
-    if not crud.user.is_superuser(current_user):
-        raise HTTPException(
-            status_code=400, detail="The user doesn't have enough privileges"
-        )
-    return user
-
-
 @router.get("/me", response_model=schemas.User)
 def read_user_me(
     db: Session = Depends(deps.get_db),
     current_user: models.User = Depends(deps.get_current_active_user),
-) -> Any:
+):
     """
     Get current user.
     """
@@ -64,18 +42,18 @@ def create_user(
     current_user: models.User = Depends(deps.get_current_active_superuser),
     *,
     user_in: schemas.UserCreate,
-) -> Any:
+):
     """
     Create new user.
     """
-    user = crud.user.get_by_email(db, email=user_in.email)
+    user = crud.user.get_with_email(db, email=user_in.email)
     if user:
         raise HTTPException(
             status_code=400,
             detail="The user with this username already exists in the system.")
     user = crud.user.create(db, obj_in=user_in)
     if settings.EMAILS_ENABLED and user_in.email:
-        send_new_account_email(
+        utils.send_new_account_email(
             email_to=user_in.email, username=user_in.email, password=user_in.password
         )
     return user
@@ -88,7 +66,7 @@ def create_user_open(
     password: str = Body(...),
     email: EmailStr = Body(...),
     nickname: str = Body(None),
-) -> Any:
+):
     """
     Create new user without the need to be logged in.
     """
@@ -97,7 +75,7 @@ def create_user_open(
             status_code=403,
             detail="Open user registration is forbidden on this server",
         )
-    user = crud.user.get_by_email(db, email=email)
+    user = crud.user.get_with_email(db, email=email)
     if user:
         raise HTTPException(
             status_code=400,
@@ -118,11 +96,11 @@ def create_user_open(
 @router.put("/{user_id}", response_model=schemas.User)
 def update_user(
     db: Session = Depends(deps.get_db),
-    current_user: models.User = Depends(deps.get_current_active_superuser),
+    current_user: schemas.User = Depends(deps.get_current_active_superuser),
     *,
     user_id: int,
     user_in: schemas.UserUpdate,
-) -> Any:
+):
     """
     Update a user.
     """
@@ -139,12 +117,12 @@ def update_user(
 @router.put("/me", response_model=schemas.User)
 def update_user_me(
     db: Session = Depends(deps.get_db),
-    current_user: models.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_active_user),
     *,
     password: str = Body(None),
     nickname: str = Body(None),
     email: EmailStr = Body(None),
-) -> Any:
+):
     """
     Update own user.
     """

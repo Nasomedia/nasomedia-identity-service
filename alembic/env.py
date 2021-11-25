@@ -27,7 +27,7 @@ fileConfig(config.config_file_name)
 import sys
 sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 
-from app.db.base import Base  # noqa
+from app.db import Base  # noqa
 
 target_metadata = Base.metadata
 

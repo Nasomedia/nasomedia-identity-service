@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     TOKEN_URL: str = os.getenv("TOKEN_URL")
     # 60 minutes * 24 hours * 1 days = 1 days
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 1
+    ENCRYPT_ALGORITHM = os.getenv("ENCRYPT_ALGORITHM")
     # BACKEND_CORS_ORIGINS is a JSON-formatted list of origins
     # e.g: '["http://localhost", "http://localhost:4200", "http://localhost:3000", \
     # "http://localhost:8080", "http://local.dockertoolbox.tiangolo.com"]'
@@ -59,7 +60,8 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: Optional[str] = os.getenv("SMTP_PASSWORD")
     EMAILS_FROM_EMAIL: Optional[EmailStr] = os.getenv("EMAILS_FROM_EMAIL")
     EMAILS_FROM_NAME: Optional[str] = None
-
+    SERVER_HOST = os.getenv("SERVER_HOST")
+    
     @validator("EMAILS_FROM_NAME")
     def get_project_name(cls, v: Optional[str], values: Dict[str, Any]) -> str:
         if not v:
