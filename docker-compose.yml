@@ -14,6 +14,8 @@ services:
     command: >
       bash -c "/app/prestart.sh 
       && uvicorn app.main:app --host 0.0.0.0 --port 80"
+    networks:
+      - servicenet
     deploy:
       replicas: 1
 
@@ -24,8 +26,12 @@ services:
       - postgres-data:/var/lib/postgresql/data
     env_file:
       - .env
-    deploy: 
+    deploy:
       replicas: 1
 
 volumes:
   postgres-data:
+
+networks:
+  servicenet:
+    external: true
