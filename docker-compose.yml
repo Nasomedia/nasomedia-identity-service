@@ -4,8 +4,7 @@ services:
   app:
     image: nasomedia-identity-service
     build:
-      context: .
-      dockerfile: Dockerfile
+      dockerfile: hwc9169/nasomedia-identity-service:v1.0
     ports:
       - "80:80"
     env_file:
