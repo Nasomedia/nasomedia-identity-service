@@ -2,7 +2,7 @@ version: '3'
 
 services:
   app:
-    image: hwc9169/nasomedia-identity-service:v1.0
+    image: hwc9169/nasomedia-identity-service:latest
     ports:
       - "81:80"
     env_file:
@@ -15,7 +15,10 @@ services:
       bash -c "/app/prestart.sh 
       && uvicorn app.main:app --host 0.0.0.0 --port 80"
     networks:
-      - servicenet
+      servicenet:
+        aliases:
+          - identity
+      internal:
     deploy:
       replicas: 1
 
@@ -26,6 +29,8 @@ services:
       - postgres-data:/var/lib/postgresql/data
     env_file:
       - .env
+    networks:
+      internal:
     deploy:
       replicas: 1
 
@@ -35,3 +40,4 @@ volumes:
 networks:
   servicenet:
     external: true
+  internal:

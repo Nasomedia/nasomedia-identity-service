@@ -13,7 +13,7 @@ load_dotenv()
 
 
 class Settings(BaseSettings):
-    API_V1_STR: str = "/v1"
+    API_V1_STR: str = os.getenv("API_V1_STR","/api/v1")
     PROJECT_NAME: str = os.getenv("PROJECT_NAME")
     
     SECRET_KEY: str = secrets.token_urlsafe(32)
