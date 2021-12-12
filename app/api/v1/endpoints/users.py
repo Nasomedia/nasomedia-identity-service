@@ -59,12 +59,11 @@ async def create_user(
         utils.send_new_account_email(
             email_to=user_in.email, username=user_in.email, password=user_in.password
         )
-    token={
-        "access_token": utils.create_access_token(
-            user.id, 
-            expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)),
-        "token_type": "bearer",
-    }
+    token= utils.create_access_token(
+        user.id, 
+        expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    )
+
     await cash_service.create_consumer(token)
     return user
 
@@ -101,12 +100,11 @@ async def create_user_open(
 
     user_in = schemas.UserCreate(password=password, email=email, nickname=nickname)
     user = crud.user.create(db, obj_in=user_in)
-    token={
-        "access_token": utils.create_access_token(
-            user.id, 
-            expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)),
-        "token_type": "bearer",
-    }
+    token= utils.create_access_token(
+        user.id, 
+        expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    )
+
     await cash_service.create_consumer(token)
     return user
 
