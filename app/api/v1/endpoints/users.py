@@ -3,9 +3,11 @@ from fastapi import APIRouter, Body, Depends, HTTPException
 from fastapi.encoders import jsonable_encoder
 from pydantic.networks import EmailStr
 from sqlalchemy.orm import Session
+from datetime import timedelta
 
 from app import crud, models, schemas, deps, utils
 from app.core.config import settings
+
 
 router = APIRouter()
 
@@ -37,9 +39,10 @@ def read_user_me(
 
 
 @router.post("", response_model=schemas.User)
-def create_user(
+async def create_user(
     db: Session = Depends(deps.get_db),
     current_user: models.User = Depends(deps.get_current_active_superuser),
+    cash_service: deps.CashService = Depends(),
     *,
     user_in: schemas.UserCreate,
 ):
@@ -56,12 +59,20 @@ def create_user(
         utils.send_new_account_email(
             email_to=user_in.email, username=user_in.email, password=user_in.password
         )
+    token={
+        "access_token": utils.create_access_token(
+            user.id, 
+            expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)),
+        "token_type": "bearer",
+    }
+    await cash_service.create_consumer(token)
     return user
 
 
 @router.post("/open", response_model=schemas.User)
-def create_user_open(
+async def create_user_open(
     db: Session = Depends(deps.get_db),
+    cash_service: deps.CashService = Depends(),
     *,
     password: str = Body(...),
     email: EmailStr = Body(...),
@@ -90,6 +101,13 @@ def create_user_open(
 
     user_in = schemas.UserCreate(password=password, email=email, nickname=nickname)
     user = crud.user.create(db, obj_in=user_in)
+    token={
+        "access_token": utils.create_access_token(
+            user.id, 
+            expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)),
+        "token_type": "bearer",
+    }
+    await cash_service.create_consumer(token)
     return user
 
 
